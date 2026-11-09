@@ -93,15 +93,31 @@ onMounted(async () => {
 <template>
   <section v-if="profile">
     <h1>My Profile</h1>
-    <p v-if="error">{{ error }}</p>
+    <p v-if="error" class="error">{{ error }}</p>
 
     <template v-if="!editing">
-      <div>Name: {{ profile.username }}</div>
-      <div>Who Am I? {{ profile.description || '—' }}</div>
-      <div>My Interests: {{ profile.tags.map((tag) => tag.name).join(', ') || '—' }}</div>
-      <div>Availability: {{ profile.availability || '—' }}</div>
-      <div>Email: {{ profile.email }}</div>
-      <div>Discord tag: {{ profile.discordTag || '—' }}</div>
+      <b>Name</b>
+      <p>{{ profile.username }}</p>
+
+      <b>Who Am I?</b>
+      <p>{{ profile.description || 'Your tale is still unwritten.' }}</p>
+
+      <b>My Interests</b>
+      <div class="tags">
+        <span v-for="tag in profile.tags" :key="tag.id" class="tag">{{ tag.name }}</span>
+        <span v-if="profile.tags.length === 0" class="muted">None recorded</span>
+      </div>
+
+      <b>Availability</b>
+      <p>{{ profile.availability || '—' }}</p>
+
+      <b>Email</b>
+      <p>{{ profile.email }}</p>
+
+      <b>Discord Tag</b>
+      <p>{{ profile.discordTag || '—' }}</p>
+
+      <div class="divider"></div>
       <button @click="editProfile">Edit Profile</button>
     </template>
 
@@ -110,25 +126,32 @@ onMounted(async () => {
         Name
         <input v-model="draft.username" type="text" />
       </label>
+
       <label>
         Who Am I?
         <textarea v-model="draft.description" rows="3"></textarea>
       </label>
-      <div>
-        My Interests
+
+      <label>My Interests</label>
+      <div class="check-list">
         <label v-for="tag in allTags" :key="tag.id">
           <input type="checkbox" :checked="isPicked(tag)" @change="toggleTag(tag)" />
           {{ tag.name }}
         </label>
-        <div v-for="tag in draft.tags" :key="tag.id ?? tag.name">
-          <template v-if="!allTags.some((t) => t.name === tag.name)">
-            {{ tag.name }}
-            <button type="button" @click="removeTag(tag.name)">x</button>
-          </template>
-        </div>
-        <input v-model="newTag" type="text" placeholder="Add your own tag" @keyup.enter="addTag" />
-        <button type="button" @click="addTag">+</button>
       </div>
+
+      <div class="tags">
+        <span v-for="tag in draft.tags.filter((t) => !allTags.some((o) => o.name === t.name))" :key="tag.name">
+          {{ tag.name }}
+          <button class="quiet" type="button" @click="removeTag(tag.name)">x</button>
+        </span>
+      </div>
+
+      <div class="row">
+        <input v-model="newTag" type="text" placeholder="Add your own tag" @keyup.enter="addTag" />
+        <button class="quiet" type="button" @click="addTag">Add</button>
+      </div>
+
       <label>
         Availability
         <input v-model="draft.availability" type="text" />
@@ -138,27 +161,13 @@ onMounted(async () => {
         <input v-model="draft.email" type="email" />
       </label>
       <label>
-        Discord tag
+        Discord Tag
         <input v-model="draft.discordTag" type="text" />
       </label>
+
+      <div class="divider"></div>
       <button @click="confirmEdit">Save</button>
-      <button @click="cancelEdit">Cancel</button>
+      <button class="quiet" @click="cancelEdit">Cancel</button>
     </template>
   </section>
 </template>
-
-<style scoped>
-label {
-  display: block;
-  margin-bottom: 0.75rem;
-}
-input,
-textarea {
-  display: block;
-  width: 100%;
-  max-width: 20rem;
-}
-button {
-  margin: 0.5rem 0.5rem 0 0;
-}
-</style>

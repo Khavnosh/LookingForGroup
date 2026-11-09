@@ -33,6 +33,7 @@ async function onSubmit() {
 <template>
   <section>
     <h1>Register</h1>
+    <p>Have your name inscribed in the guild ledger.</p>
     <form @submit.prevent="onSubmit">
       <label>
         Username
@@ -46,29 +47,10 @@ async function onSubmit() {
         Password
         <input v-model="password" type="password" autocomplete="new-password" />
       </label>
-      <p v-if="error">{{ error }}</p>
-      <button type="submit" :disabled="busy">{{ busy ? 'Creating…' : 'Create account' }}</button>
+      <p v-if="error" class="error">{{ error }}</p>
+      <button type="submit" :disabled="busy">{{ busy ? 'Inscribing…' : 'Create account' }}</button>
     </form>
-    <p>Already have an account? <router-link to="/login">Log in</router-link></p>
+    <div class="divider"></div>
+    <p class="muted">Already in the ledger? <router-link to="/login">Log in</router-link></p>
   </section>
 </template>
-
-<style scoped>
-section {
-  max-width: 20rem;
-}
-label {
-  display: block;
-  margin-bottom: 0.75rem;
-}
-input {
-  display: block;
-  width: 100%;
-}
-p {
-  color: crimson;
-}
-button {
-  margin-top: 0.5rem;
-}
-</style>

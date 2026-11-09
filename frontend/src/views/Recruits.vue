@@ -33,42 +33,22 @@ onMounted(load)
 <template>
   <section>
     <h1>Look For Recruits</h1>
-    <p>Look into some possible recruits for your indie project!</p>
+    <p>Scout the tavern for adventurers whose skills suit your quest.</p>
 
-    <form @submit.prevent="load">
-      <input v-model="search" type="search" placeholder="Search by name or interest tag" />
-      <button type="submit">Search</button>
-    </form>
+    <div class="row">
+      <input v-model="search" type="search" placeholder="Search by name or interest tag" @keyup.enter="load" />
+      <button @click="load">Search</button>
+    </div>
 
-    <p v-if="error">{{ error }}</p>
-    <p v-else-if="loading">Loading…</p>
-    <p v-else-if="recruits.length === 0">No recruits found.</p>
+    <p v-if="error" class="error">{{ error }}</p>
+    <p v-else-if="loading" class="muted">Scouting…</p>
+    <p v-else-if="recruits.length === 0" class="muted">No recruits found.</p>
 
-    <ul>
-      <li v-for="recruit in recruits" :key="recruit.id" @click="routeToRecruitDetail(recruit.id)">
-        <strong>{{ recruit.username }}</strong>
-        <span>Interested in: {{ recruit.tags.map((tag) => tag.name).join(', ') || 'nothing yet' }}</span>
+    <ul class="list">
+      <li v-for="recruit in recruits" :key="recruit.id" class="entry" @click="routeToRecruitDetail(recruit.id)">
+        <span class="name">{{ recruit.username }}</span>
+        <span class="meta">Interested in: {{ recruit.tags.map((tag) => tag.name).join(', ') || 'nothing yet' }}</span>
       </li>
     </ul>
   </section>
 </template>
-
-<style scoped>
-form {
-  margin: 1rem 0;
-}
-ul {
-  list-style: none;
-  padding: 0;
-}
-li {
-  border: 1px solid #ddd;
-  padding: 0.75rem;
-  margin-bottom: 0.5rem;
-  cursor: pointer;
-}
-li span {
-  display: block;
-  color: #666;
-}
-</style>

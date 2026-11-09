@@ -50,6 +50,7 @@ async function onSubmit() {
 <template>
   <section>
     <h1>Make Group</h1>
+    <p>Found a new company and set its banner.</p>
     <form @submit.prevent="onSubmit">
       <label>
         Group Name
@@ -59,36 +60,17 @@ async function onSubmit() {
         Description
         <textarea v-model="description" rows="3"></textarea>
       </label>
-      <div>
-        Project Tags
+
+      <label>Project Tags</label>
+      <div class="check-list">
         <label v-for="tag in allTags" :key="tag.id">
           <input type="checkbox" :checked="isPicked(tag)" @change="toggleTag(tag)" />
           {{ tag.name }}
         </label>
       </div>
-      <p v-if="error">{{ error }}</p>
-      <button type="submit" :disabled="busy">{{ busy ? 'Creating…' : 'Create Group' }}</button>
+
+      <p v-if="error" class="error">{{ error }}</p>
+      <button type="submit" :disabled="busy">{{ busy ? 'Founding…' : 'Create Group' }}</button>
     </form>
   </section>
 </template>
-
-<style scoped>
-label {
-  display: block;
-  margin-bottom: 0.75rem;
-}
-input[type='text'],
-textarea {
-  display: block;
-  width: 100%;
-  max-width: 24rem;
-}
-input[type='checkbox'] {
-  display: inline;
-  width: auto;
-  margin-right: 0.35rem;
-}
-button {
-  margin-top: 0.5rem;
-}
-</style>

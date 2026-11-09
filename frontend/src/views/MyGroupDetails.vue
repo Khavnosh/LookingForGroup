@@ -19,14 +19,25 @@ onMounted(async () => {
 
 <template>
   <section>
-    <p v-if="error">{{ error }}</p>
+    <p v-if="error" class="error">{{ error }}</p>
     <template v-else-if="group">
       <h1>{{ group.name }}</h1>
-      <b>Description:</b>
+
+      <b>Description</b>
       <p>{{ group.description }}</p>
-      <b>Project Tags:</b>
-      <div v-for="tag in group.tags" :key="tag.id">{{ tag.name }}</div>
-      <b>Members:</b> {{ group.memberCount }}
+
+      <b>Project Tags</b>
+      <div class="tags">
+        <span v-for="tag in group.tags" :key="tag.id" class="tag">{{ tag.name }}</span>
+        <span v-if="group.tags.length === 0" class="muted">None recorded</span>
+      </div>
+
+      <b>Members</b>
+      <p>{{ group.memberCount }}</p>
+
+      <div class="divider"></div>
+
+      <p class="muted">Group management — editing the profile, member roles and removals — comes next.</p>
     </template>
   </section>
 </template>

@@ -9,6 +9,7 @@ import GroupDetails from '../views/GroupDetails.vue'
 import MyGroups from '../views/MyGroups.vue'
 import MyGroupDetails from '../views/MyGroupDetails.vue'
 import MakeGroup from '../views/MakeGroup.vue'
+import Mail from '../views/Mail.vue'
 import Profile from '../views/Profile.vue'
 import { useAuth } from '../composables/useAuth'
 
@@ -41,7 +42,8 @@ const routes = [
     meta: { requiresAuth: true },
     props: true
   },
-  { path: '/profile', name: 'Profile', component: Profile, meta: { requiresAuth: true } }
+  { path: '/profile', name: 'Profile', component: Profile, meta: { requiresAuth: true } },
+  { path: '/mail', name: 'Mail', component: Mail, meta: { requiresAuth: true } }
 ]
 
 const router = createRouter({

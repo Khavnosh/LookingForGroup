@@ -23,46 +23,43 @@ onMounted(async () => {
 <template>
   <section>
     <h1>My Groups</h1>
-    <p v-if="error">{{ error }}</p>
+    <p class="muted">Companies you lead, and companies that took you in.</p>
+    <p v-if="error" class="error">{{ error }}</p>
 
     <button @click="router.push({ name: 'MakeGroup' })">Make Group</button>
 
+    <div class="divider"></div>
+
     <h2>Owned Groups</h2>
-    <p v-if="owned.length === 0">You don't own any groups yet.</p>
-    <ul>
-      <li v-for="group in owned" :key="group.id" @click="router.push({ name: 'MyGroupDetails', params: { id: group.id } })">
-        <strong>{{ group.name }}</strong>
-        <span>{{ group.tags.map((tag) => tag.name).join(', ') || 'no tags' }}</span>
+    <p v-if="owned.length === 0" class="muted">You don't own any groups yet.</p>
+    <ul class="list">
+      <li
+        v-for="group in owned"
+        :key="group.id"
+        class="entry"
+        @click="router.push({ name: 'MyGroupDetails', params: { id: group.id } })"
+      >
+        <span class="name">{{ group.name }}</span>
+        <div class="tags">
+          <span v-for="tag in group.tags" :key="tag.id" class="tag">{{ tag.name }}</span>
+        </div>
       </li>
     </ul>
 
     <h2>Joined Groups</h2>
-    <p v-if="joined.length === 0">You haven't joined any groups yet.</p>
-    <ul>
-      <li v-for="group in joined" :key="group.id" @click="router.push({ name: 'GroupDetails', params: { id: group.id } })">
-        <strong>{{ group.name }}</strong>
-        <span>{{ group.tags.map((tag) => tag.name).join(', ') || 'no tags' }}</span>
+    <p v-if="joined.length === 0" class="muted">You haven't joined any groups yet.</p>
+    <ul class="list">
+      <li
+        v-for="group in joined"
+        :key="group.id"
+        class="entry"
+        @click="router.push({ name: 'GroupDetails', params: { id: group.id } })"
+      >
+        <span class="name">{{ group.name }}</span>
+        <div class="tags">
+          <span v-for="tag in group.tags" :key="tag.id" class="tag">{{ tag.name }}</span>
+        </div>
       </li>
     </ul>
   </section>
 </template>
-
-<style scoped>
-ul {
-  list-style: none;
-  padding: 0;
-}
-li {
-  border: 1px solid #ddd;
-  padding: 0.75rem;
-  margin-bottom: 0.5rem;
-  cursor: pointer;
-}
-li span {
-  display: block;
-  color: #666;
-}
-button {
-  margin: 0.5rem 0 1rem;
-}
-</style>

@@ -76,6 +76,31 @@ CREATE TABLE IF NOT EXISTS is_member(
         ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS mail(
+    mail_id SERIAL PRIMARY KEY,
+    sender_id INT NOT NULL,
+    recipient_id INT NOT NULL,
+    group_id INT NOT NULL,
+    kind VARCHAR(10) NOT NULL,
+    status VARCHAR(10) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_mail_sender
+        FOREIGN KEY (sender_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_mail_recipient
+        FOREIGN KEY (recipient_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_mail_group
+        FOREIGN KEY (group_id)
+        REFERENCES game_groups(id)
+        ON DELETE CASCADE
+);
+
 INSERT INTO tags (tag_name) VALUES
     ('Game Dev'),
     ('Art'),

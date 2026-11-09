@@ -64,6 +64,17 @@ async function findOrCreateTag(name) {
   ).rows[0];
 }
 
+const MAIL_SELECT = `
+  SELECT m.mail_id AS id, m.kind, m.status, m.created_at AS "createdAt",
+         json_build_object('id', s.user_id, 'username', s.username) AS sender,
+         json_build_object('id', r.user_id, 'username', r.username) AS recipient,
+         json_build_object('id', g.id, 'name', g.name) AS "group"
+  FROM mail m
+  JOIN users s ON s.user_id = m.sender_id
+  JOIN users r ON r.user_id = m.recipient_id
+  JOIN game_groups g ON g.id = m.group_id
+`;
+
 function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
@@ -75,6 +86,10 @@ function requireAuth(req, res, next) {
   }
   next();
 }
+
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true });
+});
 
 app.post('/api/register', async (req, res) => {
   const { username, email, password } = req.body ?? {};
@@ -273,6 +288,97 @@ app.post('/api/groups', requireAuth, async (req, res) => {
     [groupId]
   );
   res.status(201).json({ group: result.rows[0] });
+});
+
+app.post('/api/mails', requireAuth, async (req, res) => {
+  const { kind, groupId, toUserId } = req.body ?? {};
+  if (kind !== 'recruit' && kind !== 'join') {
+    return res.status(400).json({ error: "kind must be 'recruit' or 'join'" });
+  }
+  if (!groupId) return res.status(400).json({ error: 'groupId is required' });
+
+  const groupResult = await db.query('SELECT id, owner_id FROM game_groups WHERE id = $1', [groupId]);
+  if (groupResult.rowCount === 0) return res.status(404).json({ error: 'Group not found' });
+  const group = groupResult.rows[0];
+
+  let recipientId;
+  if (kind === 'join') {
+    if (group.owner_id === req.user.id) {
+      return res.status(400).json({ error: 'You already own this group' });
+    }
+    recipientId = group.owner_id;
+  } else {
+    if (group.owner_id !== req.user.id) {
+      return res.status(403).json({ error: 'Only the owner can recruit for this group' });
+    }
+    if (!toUserId) return res.status(400).json({ error: 'toUserId is required' });
+    recipientId = Number(toUserId);
+  }
+
+  const duplicate = await db.query(
+    `SELECT 1 FROM mail
+     WHERE sender_id = $1 AND recipient_id = $2 AND group_id = $3 AND kind = $4 AND status = 'pending'`,
+    [req.user.id, recipientId, groupId, kind]
+  );
+  if (duplicate.rowCount > 0) {
+    return res.status(409).json({ error: 'There is already a pending request like this' });
+  }
+
+  const created = await db.query(
+    `INSERT INTO mail (sender_id, recipient_id, group_id, kind)
+     VALUES ($1, $2, $3, $4) RETURNING mail_id`,
+    [req.user.id, recipientId, groupId, kind]
+  );
+  const result = await db.query(`${MAIL_SELECT} WHERE m.mail_id = $1`, [created.rows[0].mail_id]);
+  res.status(201).json({ mail: result.rows[0] });
+});
+
+app.get('/api/mails', requireAuth, async (req, res) => {
+  const result = await db.query(
+    `${MAIL_SELECT} WHERE m.recipient_id = $1 ORDER BY m.created_at DESC`,
+    [req.user.id]
+  );
+  res.json({ mails: result.rows });
+});
+
+app.post('/api/mails/:id/accept', requireAuth, async (req, res) => {
+  const found = await db.query('SELECT * FROM mail WHERE mail_id = $1', [req.params.id]);
+  if (found.rowCount === 0) return res.status(404).json({ error: 'Mail not found' });
+  const mail = found.rows[0];
+
+  if (mail.recipient_id !== req.user.id) {
+    return res.status(403).json({ error: 'This mail is not addressed to you' });
+  }
+  if (mail.status !== 'pending') {
+    return res.status(400).json({ error: `This request is already ${mail.status}` });
+  }
+
+  const newMemberId = mail.kind === 'join' ? mail.sender_id : mail.recipient_id;
+  await db.query('INSERT INTO is_member (group_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [
+    mail.group_id,
+    newMemberId,
+  ]);
+  await db.query(`UPDATE mail SET status = 'accepted' WHERE mail_id = $1`, [mail.mail_id]);
+
+  const result = await db.query(`${MAIL_SELECT} WHERE m.mail_id = $1`, [mail.mail_id]);
+  res.json({ mail: result.rows[0] });
+});
+
+app.post('/api/mails/:id/deny', requireAuth, async (req, res) => {
+  const found = await db.query('SELECT * FROM mail WHERE mail_id = $1', [req.params.id]);
+  if (found.rowCount === 0) return res.status(404).json({ error: 'Mail not found' });
+  const mail = found.rows[0];
+
+  if (mail.recipient_id !== req.user.id) {
+    return res.status(403).json({ error: 'This mail is not addressed to you' });
+  }
+  if (mail.status !== 'pending') {
+    return res.status(400).json({ error: `This request is already ${mail.status}` });
+  }
+
+  await db.query(`UPDATE mail SET status = 'denied' WHERE mail_id = $1`, [mail.mail_id]);
+  const result = await db.query(`${MAIL_SELECT} WHERE m.mail_id = $1`, [mail.mail_id]);
+  res.json({ mail: result.rows[0] });
 });
 
 app.use((err, req, res, next) => {

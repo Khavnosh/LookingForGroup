@@ -33,44 +33,26 @@ onMounted(load)
 <template>
   <section>
     <h1>Look For Groups</h1>
-    <p>Search groups by name or project tag, then ask to join.</p>
+    <p>Seek out companies gathering to forge something worth playing.</p>
 
-    <form @submit.prevent="load">
-      <input v-model="search" type="search" placeholder="Search by name or project tag" />
-      <button type="submit">Search</button>
-    </form>
+    <div class="row">
+      <input v-model="search" type="search" placeholder="Search by name or project tag" @keyup.enter="load" />
+      <button @click="load">Search</button>
+    </div>
 
-    <p v-if="error">{{ error }}</p>
-    <p v-else-if="loading">Loading…</p>
-    <p v-else-if="groups.length === 0">No groups found.</p>
+    <p v-if="error" class="error">{{ error }}</p>
+    <p v-else-if="loading" class="muted">Searching…</p>
+    <p v-else-if="groups.length === 0" class="muted">No groups found.</p>
 
-    <ul>
-      <li v-for="group in groups" :key="group.id" @click="routeToGroupDetail(group.id)">
-        <strong>{{ group.name }}</strong>
-        <span>{{ group.description }}</span>
-        <span>Tags: {{ group.tags.map((tag) => tag.name).join(', ') || 'none' }}</span>
-        <span>Owner: {{ group.owner.username }} · {{ group.memberCount }} member(s)</span>
+    <ul class="list">
+      <li v-for="group in groups" :key="group.id" class="entry" @click="routeToGroupDetail(group.id)">
+        <span class="name">{{ group.name }}</span>
+        <span class="meta">{{ group.description }}</span>
+        <div class="tags">
+          <span v-for="tag in group.tags" :key="tag.id" class="tag">{{ tag.name }}</span>
+        </div>
+        <span class="meta">Led by {{ group.owner.username }} · {{ group.memberCount }} member(s)</span>
       </li>
     </ul>
   </section>
 </template>
-
-<style scoped>
-form {
-  margin: 1rem 0;
-}
-ul {
-  list-style: none;
-  padding: 0;
-}
-li {
-  border: 1px solid #ddd;
-  padding: 0.75rem;
-  margin-bottom: 0.5rem;
-  cursor: pointer;
-}
-li span {
-  display: block;
-  color: #666;
-}
-</style>
