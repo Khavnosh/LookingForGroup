@@ -29,6 +29,7 @@ services:
     ports:
       - "5000:5000"
     networks:
+      - external
       - internal
     environment:
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}
@@ -59,7 +60,6 @@ services:
       backend:
         condition: service_healthy
 
-  # adminer - only starts with: docker compose --profile tools up -d
   adminer:
     image: adminer:5
     container_name: lookingforgroup_adminer

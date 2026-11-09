@@ -87,6 +87,10 @@ function requireAuth(req, res, next) {
   next();
 }
 
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ ok: true });
 });
@@ -288,6 +292,129 @@ app.post('/api/groups', requireAuth, async (req, res) => {
     [groupId]
   );
   res.status(201).json({ group: result.rows[0] });
+});
+
+async function requireGroupOwner(req, res, groupId) {
+  const found = await db.query('SELECT owner_id FROM game_groups WHERE id = $1', [groupId]);
+  if (found.rowCount === 0) {
+    res.status(404).json({ error: 'Group not found' });
+    return null;
+  }
+  if (found.rows[0].owner_id !== req.user.id) {
+    res.status(403).json({ error: 'Only the owner can manage this group' });
+    return null;
+  }
+  return found.rows[0];
+}
+
+app.get('/api/groups/:id/members', async (req, res) => {
+  const result = await db.query(
+    `SELECT u.user_id AS id, u.username, m.role
+     FROM is_member m
+     JOIN users u ON u.user_id = m.user_id
+     WHERE m.group_id = $1
+     ORDER BY u.username`,
+    [req.params.id]
+  );
+  res.json({ members: result.rows });
+});
+
+app.put('/api/groups/:id/members/:userId', requireAuth, async (req, res) => {
+  const { role } = req.body ?? {};
+  if (!role) return res.status(400).json({ error: 'role is required' });
+  const group = await requireGroupOwner(req, res, req.params.id);
+  if (!group) return;
+
+  const target = Number(req.params.userId);
+  if (target === req.user.id) {
+    return res.status(400).json({ error: 'You cannot change your own role' });
+  }
+
+  const updated = await db.query(
+    'UPDATE is_member SET role = $1 WHERE group_id = $2 AND user_id = $3 RETURNING user_id AS id, role',
+    [String(role), req.params.id, target]
+  );
+  if (updated.rowCount === 0) {
+    return res.status(404).json({ error: 'That user is not a member' });
+  }
+  res.json({ member: updated.rows[0] });
+});
+
+app.delete('/api/groups/:id/members/:userId', requireAuth, async (req, res) => {
+  const group = await requireGroupOwner(req, res, req.params.id);
+  if (!group) return;
+
+  const target = Number(req.params.userId);
+  if (target === req.user.id) {
+    return res.status(400).json({ error: 'You cannot kick yourself; delete the group instead' });
+  }
+
+  const removed = await db.query(
+    'DELETE FROM is_member WHERE group_id = $1 AND user_id = $2 RETURNING user_id',
+    [req.params.id, target]
+  );
+  if (removed.rowCount === 0) {
+    return res.status(404).json({ error: 'That user is not a member' });
+  }
+  res.json({ ok: true });
+});
+
+app.put('/api/groups/:id', requireAuth, async (req, res) => {
+  const { name, description, tags } = req.body ?? {};
+  if (!name || !description) {
+    return res.status(400).json({ error: 'name and description are required' });
+  }
+  const group = await requireGroupOwner(req, res, req.params.id);
+  if (!group) return;
+
+  await db.query('UPDATE game_groups SET name = $1, description = $2 WHERE id = $3', [
+    name,
+    description,
+    req.params.id,
+  ]);
+
+  await db.query('DELETE FROM group_tags WHERE group_id = $1', [req.params.id]);
+  for (const raw of tags ?? []) {
+    const tagName = String(raw).trim();
+    if (!tagName) continue;
+    const tag = await findOrCreateTag(tagName);
+    await db.query('INSERT INTO group_tags (group_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [
+      req.params.id,
+      tag.id,
+    ]);
+  }
+
+  const result = await db.query(
+    `${GROUP_SELECT} WHERE g.id = $1 GROUP BY g.id, u.user_id, u.username`,
+    [req.params.id]
+  );
+  res.json({ group: result.rows[0] });
+});
+
+app.post('/api/groups/:id/leave', requireAuth, async (req, res) => {
+  const found = await db.query('SELECT owner_id FROM game_groups WHERE id = $1', [req.params.id]);
+  if (found.rowCount === 0) {
+    return res.status(404).json({ error: 'Group not found' });
+  }
+  if (found.rows[0].owner_id === req.user.id) {
+    return res.status(400).json({ error: 'You own this group; delete it instead' });
+  }
+
+  const removed = await db.query(
+    'DELETE FROM is_member WHERE group_id = $1 AND user_id = $2 RETURNING user_id',
+    [req.params.id, req.user.id]
+  );
+  if (removed.rowCount === 0) {
+    return res.status(404).json({ error: 'You are not a member of this group' });
+  }
+  res.json({ ok: true });
+});
+
+app.delete('/api/groups/:id', requireAuth, async (req, res) => {
+  const group = await requireGroupOwner(req, res, req.params.id);
+  if (!group) return;
+  await db.query('DELETE FROM game_groups WHERE id = $1', [req.params.id]);
+  res.json({ ok: true });
 });
 
 app.post('/api/mails', requireAuth, async (req, res) => {

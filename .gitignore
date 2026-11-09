@@ -1,2 +1,5 @@
 .env
 .mimocode
+node_modules
+dist
+.playwright-cli

@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS group_tags(
 CREATE TABLE IF NOT EXISTS is_member(
     group_id INT NOT NULL,
     user_id INT NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'member',
 
     PRIMARY KEY (group_id, user_id),
 

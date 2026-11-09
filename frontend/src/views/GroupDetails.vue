@@ -1,17 +1,23 @@
 <script setup>
-import { onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
-import { api } from '../composables/useAuth'
+import { onMounted, ref, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { api, useAuth } from '../composables/useAuth'
 
 const route = useRoute()
+const router = useRouter()
+const { user } = useAuth()
 
 const group = ref(null)
+const members = ref([])
 const error = ref('')
 const notice = ref('')
+
+const isMember = computed(() => members.value.some((member) => member.id === user.value?.id))
 
 onMounted(async () => {
   try {
     group.value = (await api(`/api/groups/${route.params.id}`)).group
+    members.value = (await api(`/api/groups/${route.params.id}/members`)).members
   } catch (err) {
     error.value = err.message
   }
@@ -23,6 +29,19 @@ async function requestToJoin() {
   try {
     await api('/api/mails', { method: 'POST', body: { kind: 'join', groupId: group.value.id } })
     notice.value = 'Request to Join sent. It is waiting in the owner’s Mail.'
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
+async function leaveGroup() {
+  if (!confirm('Leave this group?')) return
+  error.value = ''
+  notice.value = ''
+  try {
+    await api(`/api/groups/${group.value.id}/leave`, { method: 'POST' })
+    const back = router.options.history.state.back || ''
+    router.push(back.startsWith('/my-groups') ? { name: 'MyGroups' } : { name: 'Groups' })
   } catch (err) {
     error.value = err.message
   }
@@ -47,12 +66,21 @@ async function requestToJoin() {
         <span v-if="group.tags.length === 0" class="muted">None recorded</span>
       </div>
 
-      <b>Members</b>
-      <p>{{ group.memberCount }}</p>
+      <div class="divider"></div>
+
+      <h2>Member List</h2>
+      <p v-if="members.length === 0" class="muted">No members yet.</p>
+      <ul class="list">
+        <li v-for="member in members" :key="member.id" class="entry" style="cursor: default">
+          <span class="name">{{ member.username }}</span>
+          <span class="meta">{{ member.id === group.owner.id ? 'Owner' : member.role }}</span>
+        </li>
+      </ul>
 
       <div class="divider"></div>
 
-      <button @click="requestToJoin">Request to Join Group</button>
+      <button v-if="isMember" class="danger" @click="leaveGroup">Leave Group</button>
+      <button v-else @click="requestToJoin">Request to Join Group</button>
       <p v-if="notice" class="notice">{{ notice }}</p>
     </template>
   </section>

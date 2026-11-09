@@ -8,6 +8,7 @@ import Groups from '../views/Groups.vue'
 import GroupDetails from '../views/GroupDetails.vue'
 import MyGroups from '../views/MyGroups.vue'
 import MyGroupDetails from '../views/MyGroupDetails.vue'
+import JoinedGroupDetails from '../views/JoinedGroupDetails.vue'
 import MakeGroup from '../views/MakeGroup.vue'
 import Mail from '../views/Mail.vue'
 import Profile from '../views/Profile.vue'
@@ -39,6 +40,13 @@ const routes = [
     path: '/my-groups/:id',
     name: 'MyGroupDetails',
     component: MyGroupDetails,
+    meta: { requiresAuth: true },
+    props: true
+  },
+  {
+    path: '/joined-groups/:id',
+    name: 'JoinedGroupDetails',
+    component: JoinedGroupDetails,
     meta: { requiresAuth: true },
     props: true
   },

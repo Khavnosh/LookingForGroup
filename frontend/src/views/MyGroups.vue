@@ -53,7 +53,7 @@ onMounted(async () => {
         v-for="group in joined"
         :key="group.id"
         class="entry"
-        @click="router.push({ name: 'GroupDetails', params: { id: group.id } })"
+        @click="router.push({ name: 'JoinedGroupDetails', params: { id: group.id } })"
       >
         <span class="name">{{ group.name }}</span>
         <div class="tags">
