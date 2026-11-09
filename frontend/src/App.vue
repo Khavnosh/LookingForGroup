@@ -13,10 +13,14 @@ function onLogout() {
 
 <template>
   <nav>
-    <router-link to="/">Home</router-link>
     <template v-if="isLoggedIn">
+      <router-link to="/">Dashboard</router-link>
+      <router-link to="/recruits">Look For Recruits</router-link>
+      <router-link to="/groups">Look For Groups</router-link>
+      <router-link to="/my-groups">My Groups</router-link>
+      <router-link to="/profile">My Profile</router-link>
       <span>Hi, {{ user.username }}</span>
-      <button @click="onLogout">Log out</button>
+      <button @click="onLogout">Log-out</button>
     </template>
     <template v-else>
       <router-link to="/login">Login</router-link>

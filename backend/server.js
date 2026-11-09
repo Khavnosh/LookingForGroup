@@ -17,8 +17,29 @@ function signToken(user) {
 }
 
 function publicUser(row) {
-  return { id: row.user_id, username: row.username, email: row.email };
+  return {
+    id: row.user_id,
+    username: row.username,
+    email: row.email,
+    description: row.description ?? null,
+    discordTag: row.discord_tag ?? null,
+    availability: row.availability ?? null,
+    tags: row.tags ?? [],
+  };
 }
+
+const RECRUIT_SELECT = `
+  SELECT u.user_id AS id, u.username, u.email, u.description,
+         u.discord_tag AS "discordTag", u.availability,
+         COALESCE(
+           json_agg(json_build_object('id', t.tag_id, 'name', t.tag_name))
+             FILTER (WHERE t.tag_id IS NOT NULL),
+           '[]'
+         ) AS tags
+  FROM users u
+  LEFT JOIN user_interest ui ON ui.user_id = u.user_id
+  LEFT JOIN tags t ON t.tag_id = ui.tag_id
+`;
 
 function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
@@ -39,7 +60,7 @@ app.post('/api/register', async (req, res) => {
   }
   try {
     const result = await db.query(
-      'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING user_id, username, email',
+      'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING user_id, username, email, description, discord_tag, availability',
       // Plaintext storage was an explicit choice. Swap for bcrypt.hash() before anything real.
       [username, email, password]
     );
@@ -56,7 +77,7 @@ app.post('/api/login', async (req, res) => {
     return res.status(400).json({ error: 'username and password are required' });
   }
   const result = await db.query(
-    'SELECT user_id, username, email FROM users WHERE username = $1 AND password = $2',
+    'SELECT user_id, username, email, description, discord_tag, availability FROM users WHERE username = $1 AND password = $2',
     // Plaintext comparison was an explicit choice. Swap for bcrypt.compare() against a hashed column.
     [username, password]
   );
@@ -68,13 +89,96 @@ app.post('/api/login', async (req, res) => {
 
 app.get('/api/me', requireAuth, async (req, res) => {
   const result = await db.query(
-    'SELECT user_id, username, email FROM users WHERE user_id = $1',
+    `${RECRUIT_SELECT} WHERE u.user_id = $1 GROUP BY u.user_id`,
     [req.user.id]
   );
   if (result.rowCount === 0) {
     return res.status(401).json({ error: 'User no longer exists' });
   }
-  res.json({ user: publicUser(result.rows[0]) });
+  res.json({ user: result.rows[0] });
+});
+
+app.put('/api/me', requireAuth, async (req, res) => {
+  const { username, email, description, discordTag, availability } = req.body ?? {};
+  if (!username || !email) {
+    return res.status(400).json({ error: 'username and email are required' });
+  }
+  try {
+    await db.query(
+      `UPDATE users
+       SET username = $1, email = $2, description = $3, discord_tag = $4, availability = $5
+       WHERE user_id = $6`,
+      [username, email, description ?? null, discordTag ?? null, availability ?? null, req.user.id]
+    );
+    const result = await db.query(
+      `${RECRUIT_SELECT} WHERE u.user_id = $1 GROUP BY u.user_id`,
+      [req.user.id]
+    );
+    res.json({ user: result.rows[0] });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Username already taken' });
+    throw err;
+  }
+});
+
+app.get('/api/tags', async (req, res) => {
+  const result = await db.query('SELECT tag_id AS id, tag_name AS name FROM tags ORDER BY tag_name');
+  res.json({ tags: result.rows });
+});
+
+app.post('/api/me/tags', requireAuth, async (req, res) => {
+  const name = String(req.body?.name || '').trim();
+  if (!name) return res.status(400).json({ error: 'name is required' });
+
+  const found = await db.query('SELECT tag_id AS id, tag_name AS name FROM tags WHERE tag_name = $1', [name]);
+  let tag = found.rows[0];
+  if (!tag) {
+    tag = (
+      await db.query('INSERT INTO tags (tag_name) VALUES ($1) RETURNING tag_id AS id, tag_name AS name', [name])
+    ).rows[0];
+  }
+  await db.query('INSERT INTO user_interest (user_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [
+    req.user.id,
+    tag.id,
+  ]);
+  res.status(201).json({ tag });
+});
+
+app.delete('/api/me/tags/:tagId', requireAuth, async (req, res) => {
+  await db.query('DELETE FROM user_interest WHERE user_id = $1 AND tag_id = $2', [
+    req.user.id,
+    req.params.tagId,
+  ]);
+  res.json({ ok: true });
+});
+
+app.get('/api/recruits', async (req, res) => {
+  const search = String(req.query.search || '').trim();
+  const result = await db.query(
+    `${RECRUIT_SELECT}
+     WHERE ($1 = ''
+        OR u.username ILIKE '%' || $1 || '%'
+        OR EXISTS (
+          SELECT 1 FROM user_interest ui2
+          JOIN tags t2 ON t2.tag_id = ui2.tag_id
+          WHERE ui2.user_id = u.user_id AND t2.tag_name ILIKE '%' || $1 || '%'
+        ))
+     GROUP BY u.user_id
+     ORDER BY u.username`,
+    [search]
+  );
+  res.json({ recruits: result.rows });
+});
+
+app.get('/api/recruits/:id', async (req, res) => {
+  const result = await db.query(
+    `${RECRUIT_SELECT} WHERE u.user_id = $1 GROUP BY u.user_id`,
+    [req.params.id]
+  );
+  if (result.rowCount === 0) {
+    return res.status(404).json({ error: 'Recruit not found' });
+  }
+  res.json({ recruit: result.rows[0] });
 });
 
 app.use((err, req, res, next) => {

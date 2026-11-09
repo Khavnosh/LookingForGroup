@@ -7,7 +7,7 @@ const state = reactive({
 
 let restorePromise = null
 
-async function api(path, { method = 'GET', body } = {}) {
+export async function api(path, { method = 'GET', body } = {}) {
   const res = await fetch(path, {
     method,
     headers: {
@@ -51,6 +51,10 @@ export function useAuth() {
     clearSession()
   }
 
+  function setUser(next) {
+    state.user = next
+  }
+
   // Called from the router guard so a hard refresh keeps the session.
   function restore() {
     if (!state.token) return Promise.resolve(null)
@@ -68,5 +72,5 @@ export function useAuth() {
     return restorePromise
   }
 
-  return { user, isLoggedIn, login, register, logout, restore }
+  return { user, isLoggedIn, login, register, logout, restore, setUser }
 }

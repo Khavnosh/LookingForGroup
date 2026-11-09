@@ -2,7 +2,10 @@ CREATE TABLE IF NOT EXISTS users(
     user_id SERIAL PRIMARY KEY,
     username VARCHAR(20) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL,
-    password VARCHAR(255) NOT NULL
+    password VARCHAR(255) NOT NULL,
+    description VARCHAR(500),
+    discord_tag VARCHAR(50),
+    availability VARCHAR(50)
 );
 
 CREATE TABLE IF NOT EXISTS tags(

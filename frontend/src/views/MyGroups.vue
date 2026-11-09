@@ -1,12 +1,6 @@
 <template>
   <section>
-    <h1>Home</h1>
-    <p>Placeholder landing page. Replace this with whatever comes after login.</p>
+    <h1>My Groups</h1>
+    <p>Groups you own and groups you have joined.</p>
   </section>
 </template>
-
-<script setup>
-
-  
-
-</script>
