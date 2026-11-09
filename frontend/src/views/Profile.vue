@@ -7,8 +7,18 @@ const { setUser } = useAuth()
 const profile = ref(null)
 const draft = ref(null)
 const newTag = ref('')
+const allTags = ref([])
 const error = ref('')
 const editing = ref(false)
+
+function isPicked(tag) {
+  return draft.value.tags.some((t) => t.name === tag.name)
+}
+
+function toggleTag(tag) {
+  if (isPicked(tag)) draft.value.tags = draft.value.tags.filter((t) => t.name !== tag.name)
+  else draft.value.tags.push({ id: tag.id, name: tag.name })
+}
 
 async function load() {
   error.value = ''
@@ -38,8 +48,8 @@ function addTag() {
   newTag.value = ''
 }
 
-function removeTag(id) {
-  draft.value.tags = draft.value.tags.filter((tag) => tag.id !== id)
+function removeTag(name) {
+  draft.value.tags = draft.value.tags.filter((tag) => tag.name !== name)
 }
 
 async function confirmEdit() {
@@ -74,7 +84,10 @@ async function confirmEdit() {
   }
 }
 
-onMounted(load)
+onMounted(async () => {
+  await load()
+  allTags.value = (await api('/api/tags')).tags
+})
 </script>
 
 <template>
@@ -103,11 +116,17 @@ onMounted(load)
       </label>
       <div>
         My Interests
-        <div v-for="tag in draft.tags" :key="tag.id ?? tag.name">
+        <label v-for="tag in allTags" :key="tag.id">
+          <input type="checkbox" :checked="isPicked(tag)" @change="toggleTag(tag)" />
           {{ tag.name }}
-          <button type="button" @click="removeTag(tag.id)">x</button>
+        </label>
+        <div v-for="tag in draft.tags" :key="tag.id ?? tag.name">
+          <template v-if="!allTags.some((t) => t.name === tag.name)">
+            {{ tag.name }}
+            <button type="button" @click="removeTag(tag.name)">x</button>
+          </template>
         </div>
-        <input v-model="newTag" type="text" placeholder="Add an interest tag" @keyup.enter="addTag" />
+        <input v-model="newTag" type="text" placeholder="Add your own tag" @keyup.enter="addTag" />
         <button type="button" @click="addTag">+</button>
       </div>
       <label>

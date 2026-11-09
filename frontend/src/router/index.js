@@ -8,6 +8,7 @@ import Groups from '../views/Groups.vue'
 import GroupDetails from '../views/GroupDetails.vue'
 import MyGroups from '../views/MyGroups.vue'
 import MyGroupDetails from '../views/MyGroupDetails.vue'
+import MakeGroup from '../views/MakeGroup.vue'
 import Profile from '../views/Profile.vue'
 import { useAuth } from '../composables/useAuth'
 
@@ -32,6 +33,7 @@ const routes = [
     props: true
   },
   { path: '/my-groups', name: 'MyGroups', component: MyGroups, meta: { requiresAuth: true } },
+  { path: '/my-groups/new', name: 'MakeGroup', component: MakeGroup, meta: { requiresAuth: true } },
   {
     path: '/my-groups/:id',
     name: 'MyGroupDetails',

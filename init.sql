@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users(
 
 CREATE TABLE IF NOT EXISTS tags(
     tag_id SERIAL PRIMARY KEY,
-    tag_name VARCHAR(30) NOT NULL
+    tag_name VARCHAR(30) NOT NULL UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS game_groups(
@@ -75,3 +75,18 @@ CREATE TABLE IF NOT EXISTS is_member(
         REFERENCES users(user_id)
         ON DELETE CASCADE
 );
+
+INSERT INTO tags (tag_name) VALUES
+    ('Game Dev'),
+    ('Art'),
+    ('Game Sprites'),
+    ('Writing'),
+    ('Programming'),
+    ('Full-Stack'),
+    ('Front-End'),
+    ('Back-End'),
+    ('Software Engineering'),
+    ('Illustration'),
+    ('Music'),
+    ('Composing')
+ON CONFLICT (tag_name) DO NOTHING;
